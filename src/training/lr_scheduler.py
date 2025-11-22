@@ -23,7 +23,7 @@ class AdaptiveLRScheduler:
             min_lr=config.min_lr,
         )
 
-    def step(self, val_loss: float) -> Optional[float]:
+    def step(self, val_loss: float) -> Optional[tuple[float, float]]:
         if not self.config.enabled:
             return None
 
@@ -36,6 +36,6 @@ class AdaptiveLRScheduler:
 
         if new_lr < old_lr:
             self._reductions += 1
-            return new_lr
+            return (old_lr, new_lr)
 
         return None

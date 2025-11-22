@@ -79,6 +79,9 @@ class Trainer:
 
         with self.mlflow_run() as run_id:
             self.log_params_to_mlflow()
+            initial_lr = self.optimizer.param_groups[0]["lr"]
+            mlflow.log_metric("lr", initial_lr, step=0)
+
             for epoch in range(1, self.config.training.epochs + 1):
                 epochs_ran = epoch
                 train_metrics = self.run_epoch(train_loader, training=True, epoch=epoch)
@@ -105,12 +108,25 @@ class Trainer:
                         self.log_artifact(checkpoint_path)
 
                     if self.scheduler is not None:
-                        new_lr = self.scheduler.step(val_metrics.loss)
-                        if new_lr is not None:
+                        lr_change = self.scheduler.step(val_metrics.loss)
+                        if lr_change is not None:
+                            old_lr, new_lr = lr_change
+                            print(f"\n{'='*60}")
+                            print(f"Learning Rate Reduced: {old_lr:.6f} → {new_lr:.6f}")
+                            print(f"{'='*60}\n")
                             mlflow.log_metric("lr", new_lr, step=epoch)
 
                     if self.early_stopper is not None:
                         if self.early_stopper.update(val_metrics.loss):
+                            print(f"\n{'='*60}")
+                            print(f"Early Stopping Triggered at Epoch {epoch}")
+                            print(
+                                f"Best validation loss: {self.early_stopper.best_loss:.4f}"
+                            )
+                            print(
+                                f"No improvement for {self.config.early_stopping.patience_epochs} epochs"
+                            )
+                            print(f"{'='*60}\n")
                             break
 
             best_checkpoint = self.checkpointer.best_checkpoint()
@@ -119,7 +135,8 @@ class Trainer:
                 self.model.load_state_dict(state["model_state_dict"])
 
             test_metrics = self.run_epoch(test_loader, training=False, epoch=epochs_ran)
-            self.log_metrics(test_metrics, split="test", step=epochs_ran)
+            mlflow.log_metric("test_loss", test_metrics.loss)
+            mlflow.log_metric("test_accuracy", test_metrics.accuracy)
 
         return TrainingResult(
             epochs_ran=epochs_ran,
@@ -222,7 +239,7 @@ class Trainer:
         if tracking.tracking_uri:
             mlflow.set_tracking_uri(tracking.tracking_uri)
         mlflow.set_experiment(tracking.experiment_name)
-        run_name = tracking.run_name or self._default_run_name()
+        run_name = tracking.run_name or self.default_run_name()
         with mlflow.start_run(run_name=run_name, tags=tracking.tags) as run:
             yield run.info.run_id
 

@@ -7,7 +7,7 @@ from typing import Iterable, List
 
 from ..config import ExperimentConfig
 from ..data.datamodule import CIFAR100DataModule
-from ..models.sample_cnn import SampleCNN
+from ..models.sample_cnn import create_model
 from .trainer import Trainer
 
 DEFAULT_PROFILES = [
@@ -23,10 +23,8 @@ def run_experiments(
     for profile in profiles:
         config = deepcopy(config_template)
         config.optimization.profile = profile
-        config.mlflow.run_name = (
-            f"{profile}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
-        )
-        model = SampleCNN()
+        config.mlflow.run_name = f"{config.model.model_name}-{profile}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+        model = create_model(config.model)
         data = CIFAR100DataModule(config.dataset)
         trainer = Trainer(model, data, config)
         result = trainer.fit()
@@ -44,6 +42,13 @@ def run_experiments(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run CIFAR100 experiments")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="sample_cnn",
+        help="Model name to use (sample_cnn, res_cnn)",
+        choices=["sample_cnn", "res_cnn"],
+    )
     parser.add_argument(
         "--profiles",
         nargs="*",
@@ -69,6 +74,8 @@ def main(argv: List[str] | None = None) -> None:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     config = ExperimentConfig()
+    config.model.model_name = args.model
+
     if args.epochs is not None:
         config.training.epochs = args.epochs
     if args.batch_size is not None:

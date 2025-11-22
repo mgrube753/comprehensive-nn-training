@@ -26,7 +26,8 @@ OPTIMIZER_PRESETS: Dict[str, OptimizerPreset] = {
     "adam_default": OptimizerPreset(
         name="adam_default",
         optimizer_type="Adam",
-        params={"lr": 3e-4, "weight_decay": 5e-4},
+        # params={"lr": 3e-4, "weight_decay": 5e-4},
+        params={},
     ),
 }
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
-from pathlib import Path
 from typing import Dict, Optional, Tuple
+
+from .models.sample_cnn import CNNConfig
 
 
 @dataclass
@@ -79,6 +80,7 @@ class ExperimentConfig:
     checkpoint: CheckpointConfig = field(default_factory=CheckpointConfig)
     training: TrainingLoopConfig = field(default_factory=TrainingLoopConfig)
     mlflow: MLflowConfig = field(default_factory=MLflowConfig)
+    model: CNNConfig = field(default_factory=CNNConfig)
 
     def to_dict(self) -> Dict[str, object]:
         return asdict(self)

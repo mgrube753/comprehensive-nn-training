@@ -3,3 +3,4 @@ mlruns/
 checkpoints/
 data/
 !src/data/
+.python-version
