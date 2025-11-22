@@ -1,8 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
+from datetime import datetime
 from typing import Dict, Optional, Tuple
 
-from .models.sample_cnn import CNNConfig
+from .models.cnns import CNNConfig
 
 
 @dataclass
@@ -66,7 +67,9 @@ class TrainingLoopConfig:
 @dataclass
 class MLflowConfig:
     tracking_uri: Optional[str] = None
-    experiment_name: str = "cifar100-training"
+    experiment_name: str = field(
+        default_factory=lambda: f"cifar100-training-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    )
     run_name: Optional[str] = None
     tags: Dict[str, str] = field(default_factory=dict)
 

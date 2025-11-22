@@ -21,7 +21,7 @@ from torch.nn import (
 
 @dataclass
 class CNNConfig:
-    model_name: str = "sample_cnn"
+    model_name: str = "simple"
     in_channels: int = 3
     num_classes: int = 100
     width: int = 64
@@ -30,8 +30,8 @@ class CNNConfig:
 
 def create_model(config: CNNConfig) -> Module:
     model_map = {
-        "sample_cnn": SampleCNN,
-        "res_cnn": ResCNN,
+        "simple": Simple,
+        "rescnn": ResCNN,
     }
 
     name = config.model_name.lower()
@@ -43,7 +43,7 @@ def create_model(config: CNNConfig) -> Module:
     return model_map[name](config)
 
 
-class SampleCNN(Module):
+class Simple(Module):
     def __init__(self, config: CNNConfig | None = None) -> None:
         super().__init__()
         c = config or CNNConfig()

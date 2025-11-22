@@ -84,13 +84,11 @@ class Trainer:
 
             for epoch in range(1, self.config.training.epochs + 1):
                 epochs_ran = epoch
-                train_metrics = self.run_epoch(train_loader, training=True, epoch=epoch)
+                train_metrics = self.run_epoch(train_loader, phase="Train", epoch=epoch)
                 self.log_metrics(train_metrics, split="train", step=epoch)
 
                 if epoch % self.config.training.val_every_n_epochs == 0:
-                    val_metrics = self.run_epoch(
-                        val_loader, training=False, epoch=epoch
-                    )
+                    val_metrics = self.run_epoch(val_loader, phase="Val", epoch=epoch)
                     if (
                         best_val_metrics is None
                         or val_metrics.loss < best_val_metrics.loss
@@ -134,7 +132,7 @@ class Trainer:
                 state = torch.load(best_checkpoint, map_location=self.device)
                 self.model.load_state_dict(state["model_state_dict"])
 
-            test_metrics = self.run_epoch(test_loader, training=False, epoch=epochs_ran)
+            test_metrics = self.run_epoch(test_loader, phase="Test", epoch=epochs_ran)
             mlflow.log_metric("test_loss", test_metrics.loss)
             mlflow.log_metric("test_accuracy", test_metrics.accuracy)
 
@@ -147,12 +145,11 @@ class Trainer:
         )
 
     def run_epoch(
-        self, dataloader: DataLoader, *, training: bool, epoch: int
+        self, dataloader: DataLoader, *, phase: str, epoch: int
     ) -> EpochMetrics:
         state = MetricState()
-        self.model.train(mode=training)
+        self.model.train(mode=True if phase == "Train" else False)
 
-        phase = "Train" if training else "Val"
         total_epochs = self.config.training.epochs
         pbar = tqdm(
             dataloader,
@@ -162,9 +159,11 @@ class Trainer:
             ncols=140,
         )
 
-        grad_context = torch.enable_grad() if training else torch.no_grad()
+        grad_context = torch.enable_grad() if phase == "Train" else torch.no_grad()
         with grad_context:
-            for batch_idx, (inputs, targets) in enumerate(pbar, start=1):
+            for _, (inputs, targets) in enumerate(
+                pbar, start=1
+            ):  # instead of batch_idx
                 inputs = inputs.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
 
@@ -172,7 +171,7 @@ class Trainer:
                     logits = self.model(inputs)
                     loss = self.criterion(logits, targets)
 
-                if training:
+                if phase == "Train":
                     self.optimizer.zero_grad(set_to_none=True)
                     if self.use_amp:
                         self.scaler.scale(loss).backward()
@@ -192,7 +191,7 @@ class Trainer:
                 )
 
                 if (
-                    training
+                    phase == "Train"
                     and self.global_step % self.config.training.log_every_n_steps == 0
                 ):
                     mlflow.log_metrics(current, step=self.global_step)

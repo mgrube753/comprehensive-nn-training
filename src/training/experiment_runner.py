@@ -7,13 +7,11 @@ from typing import Iterable, List
 
 from ..config import ExperimentConfig
 from ..data.datamodule import CIFAR100DataModule
-from ..models.sample_cnn import create_model
+from ..models.cnns import create_model
+from ..optim.optimizer_factory import available_presets
 from .trainer import Trainer
 
-DEFAULT_PROFILES = [
-    "sgd_baseline",
-    "adam_default",
-]
+DEFAULT_PROFILES = list(available_presets())
 
 
 def run_experiments(
@@ -45,9 +43,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--model",
         type=str,
-        default="sample_cnn",
-        help="Model name to use (sample_cnn, res_cnn)",
-        choices=["sample_cnn", "res_cnn"],
+        default="simple",
+        help="Model name to use (simple, rescnn)",
+        choices=["simple", "rescnn"],
     )
     parser.add_argument(
         "--profiles",
